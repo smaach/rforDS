@@ -73,10 +73,109 @@ filter(flights, dep_time >= 2400, dep_time <= 0600)
 filter(flights, is.na(dep_time))
 summary(flights)
 NA & NA & NaN & Inf
+
+#arrange()
 arrange(flights, year, month, day)
 arrange(flights, desc(dep_time))
 arrange(flights, desc(arr_delay))
 arrange(flights, arr_delay)
+
+#select()
 select(flights, arr_time)
-arrange(flights, arr_time)
 select(flights, -(year:day))
+select(flights, contains())
+select(flights, time_hour, air_time, everything())
+rename(flights, tail_num = tailnum)
+select(flights, air_time, air_time)
+select(flights, contains('TIME'))
+select(flights, starts_with('arr'))
+select(flights, ends_with('time'))
+
+
+#mutate
+
+flights_sml <- select(flights,
+                      year:day,
+                      ends_with('delay'),
+                      distance,
+                      air_time
+                      )
+mutate(flights_sml,
+       gain = arr_delay - dep_delay,
+       speed = distance/air_time * 60)
+flights
+flights_sml
+flights_sml <- transmute(flights,
+          gain = arr_delay - dep_delay,
+          hours = air_time / 60,
+          gain_per_hour = gain / hours
+          )
+flights_sml
+flights
+# ?transmute --> removes everyother variable from the tible and only
+#                keeps the one which you have defined
+
+# integer division --> %/%
+#modular division --> %%
+
+transmute(flights,
+          dep_time,
+          hour = dep_time %/% 100,
+          minute = dep_time %% 100)
+
+#group_by(), summarize(), pipe (%>% read as 'then')
+
+by_dest <- group_by(flights, dest)
+delay <- summarize(by_dest, 
+                   count = n(),
+                   dist = mean(distance, na.rm = TRUE),
+                   delay = mean(arr_delay, na.rm = TRUE)
+                   )
+delay <- filter(delay, count > 20, dest != 'HNL')
+delay
+
+
+ggplot(delay, aes(dist, delay)) + 
+  geom_point(aes(size = count), alpha = 1/3) +
+  geom_smooth(se = FALSE)
+
+
+#better way to write the above code using
+# pipe --> %>%
+
+delays <- flights %>%
+  group_by(dest) %>%
+  summarize(count = n(),
+            dist = mean(distance, na.rm = TRUE),
+            dealy = mean(arr_delay, na.rm = TRUE)
+            ) %>%
+  filter(count > 20, dest != 'HNL')
+delays
+
+flights %>%
+  group_by(year, month, day) %>%
+  summarize(mean = mean(dep_delay, na.rm = TRUE))
+
+?summarize()
+
+not_cancelled <- flights %>%
+  filter(!is.na(dep_delay), !is.na(arr_delay))
+
+not_cancelled %>%
+  group_by(year, month, day) %>%
+  summarize(mean = mean(dep_delay))
+
+not_cancelled %>%
+  group_by(year, month, day) %>%
+  summarize(
+    avg_delay1 = mean(arr_delay),
+    avg_delay2 = mean(arr_delay[arr_delay > 0])
+  )
+
+daily <- group_by(flights, year, month, day)
+per_day <- summarize(daily, flights = n())
+per_month <- summarize(per_day, flights = sum(flights))
+
+per_month
+
+
